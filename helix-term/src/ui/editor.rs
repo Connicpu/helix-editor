@@ -669,8 +669,14 @@ impl EditorView {
         (!highlights.is_empty()).then_some(highlights)
     }
 
-    /// Render bufferline at the top
-    pub fn render_bufferline(&mut self, editor: &Editor, viewport: Rect, surface: &mut Surface) {
+    /// Render bufferline at the top. Returns height of the bufferline so
+    /// that the editor area can be clipped accordingly.
+    pub fn render_bufferline(
+        &mut self,
+        editor: &Editor,
+        viewport: Rect,
+        surface: &mut Surface,
+    ) -> u16 {
         let scratch = PathBuf::from(SCRATCH_BUFFER_NAME); // default filename to use for scratch buffer
         surface.clear_with(
             viewport,
@@ -695,6 +701,8 @@ impl EditorView {
 
         self.bufferline_info.clear();
 
+        let mut y = viewport.y;
+
         for doc in editor.documents() {
             let fname = doc
                 .path()
@@ -714,19 +722,33 @@ impl EditorView {
             let used_width = viewport.x.saturating_sub(x);
             let rem_width = surface.area.width.saturating_sub(used_width);
 
+            if x + text.len() as u16 >= surface.area.right() {
+                x = 0;
+                y += 1;
+                surface.clear_with(
+                    Rect {
+                        x,
+                        y,
+                        width: viewport.width,
+                        height: 1,
+                    },
+                    bufferline_inactive,
+                );
+            }
+
+            const MAX_LINES: u16 = 3;
+            if y > viewport.y + MAX_LINES {
+                break;
+            }
+
             let start_x = x;
-            x = surface
-                .set_stringn(x, viewport.y, text, rem_width as usize, style)
-                .0;
+            x = surface.set_stringn(x, y, text, rem_width as usize, style).0;
             let end_x = x.min(surface.area.right());
 
             self.bufferline_info
                 .add_buffer_info(doc.id(), start_x..end_x);
-
-            if x >= surface.area.right() {
-                break;
-            }
         }
+        y + 1
     }
 
     pub fn render_gutter<'d>(
@@ -1621,18 +1643,19 @@ impl Component for EditorView {
 
         let use_bufferline = is_bufferline_visible(cx.editor);
 
-        // -1 for commandline and -1 for bufferline
+        // -1 for commandline
         let mut editor_area = area.clip_bottom(1);
         if use_bufferline {
-            editor_area = editor_area.clip_top(1);
+            // -1 or more for the bufferline
+            editor_area = editor_area.clip_top(self.render_bufferline(
+                cx.editor,
+                area.with_height(1),
+                surface,
+            ));
         }
 
         // if the terminal size suddenly changed, we need to trigger a resize
         cx.editor.resize(editor_area);
-
-        if use_bufferline {
-            self.render_bufferline(cx.editor, area.with_height(1), surface);
-        }
 
         for (view, is_focused) in cx.editor.tree.views() {
             let doc = cx.editor.document(view.doc).unwrap();
