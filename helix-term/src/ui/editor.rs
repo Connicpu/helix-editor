@@ -746,7 +746,7 @@ impl EditorView {
             let end_x = x.min(surface.area.right());
 
             self.bufferline_info
-                .add_buffer_info(doc.id(), start_x..end_x);
+                .add_buffer_info(doc.id(), start_x..end_x, y);
         }
         y + 1
     }
@@ -1265,8 +1265,8 @@ impl EditorView {
             MouseEventKind::Down(MouseButton::Left) => {
                 let editor = &mut cxt.editor;
 
-                if is_bufferline_visible(editor) && row == 0 {
-                    if let Some(buffer_info) = self.bufferline_info.get_clicked_buffer(column) {
+                if is_bufferline_visible(editor) && row <= self.bufferline_info.row_max {
+                    if let Some(buffer_info) = self.bufferline_info.get_clicked_buffer(column, row) {
                         editor.switch(buffer_info.document_id, helix_view::editor::Action::Replace);
                     }
 
@@ -1752,6 +1752,7 @@ impl Component for EditorView {
 #[derive(Debug, Default)]
 struct BufferLineInfo {
     visible_buffers: Vec<BufferInfo>,
+    row_max: u16,
 }
 
 impl BufferLineInfo {
@@ -1759,17 +1760,24 @@ impl BufferLineInfo {
         self.visible_buffers.clear();
     }
 
-    fn add_buffer_info(&mut self, document_id: DocumentId, columns: std::ops::Range<u16>) {
+    fn add_buffer_info(
+        &mut self,
+        document_id: DocumentId,
+        columns: std::ops::Range<u16>,
+        row: u16,
+    ) {
         self.visible_buffers.push(BufferInfo {
             document_id,
             columns,
+            row,
         });
+        self.row_max = self.row_max.max(row);
     }
 
-    fn get_clicked_buffer(&self, column: u16) -> Option<&BufferInfo> {
+    fn get_clicked_buffer(&self, column: u16, row: u16) -> Option<&BufferInfo> {
         self.visible_buffers
             .iter()
-            .find(|cell| cell.columns.contains(&column))
+            .find(|cell| cell.row == row && cell.columns.contains(&column))
     }
 }
 
@@ -1778,6 +1786,7 @@ struct BufferInfo {
     document_id: DocumentId,
     // The bufferline column span used to show the document name
     columns: std::ops::Range<u16>,
+    row: u16,
 }
 
 fn is_bufferline_visible(editor: &Editor) -> bool {
