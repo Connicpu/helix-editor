@@ -723,6 +723,10 @@ impl EditorView {
             let rem_width = surface.area.width.saturating_sub(used_width);
 
             if x + text.len() as u16 >= surface.area.right() {
+                const MAX_LINES: u16 = 5;
+                if y + 1 >= viewport.y + MAX_LINES {
+                    break;
+                }
                 x = 0;
                 y += 1;
                 surface.clear_with(
@@ -734,11 +738,6 @@ impl EditorView {
                     },
                     bufferline_inactive,
                 );
-            }
-
-            const MAX_LINES: u16 = 3;
-            if y > viewport.y + MAX_LINES {
-                break;
             }
 
             let start_x = x;
@@ -1266,7 +1265,8 @@ impl EditorView {
                 let editor = &mut cxt.editor;
 
                 if is_bufferline_visible(editor) && row <= self.bufferline_info.row_max {
-                    if let Some(buffer_info) = self.bufferline_info.get_clicked_buffer(column, row) {
+                    if let Some(buffer_info) = self.bufferline_info.get_clicked_buffer(column, row)
+                    {
                         editor.switch(buffer_info.document_id, helix_view::editor::Action::Replace);
                     }
 
