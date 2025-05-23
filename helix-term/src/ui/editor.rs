@@ -723,7 +723,7 @@ impl EditorView {
             let rem_width = surface.area.width.saturating_sub(used_width);
 
             if x + text.len() as u16 >= surface.area.right() {
-                const MAX_LINES: u16 = 5;
+                const MAX_LINES: u16 = 8;
                 if y + 1 >= viewport.y + MAX_LINES {
                     break;
                 }
