@@ -11,7 +11,6 @@ use crate::{
 use helix_core::{
     char_idx_at_visual_offset,
     doc_formatter::TextFormat,
-    syntax::Highlight,
     text_annotations::TextAnnotations,
     visual_offset_from_anchor, visual_offset_from_block, Position, RopeSlice, Selection,
     Transaction,
@@ -459,9 +458,7 @@ impl View {
         let mut text_annotations = TextAnnotations::default();
 
         if let Some(labels) = doc.jump_labels.get(&self.id) {
-            let style = theme
-                .and_then(|t| t.find_scope_index("ui.virtual.jump-label"))
-                .map(Highlight);
+            let style = theme.and_then(|t| t.find_highlight("ui.virtual.jump-label"));
             text_annotations.add_overlay(labels, style);
         }
 
@@ -474,15 +471,10 @@ impl View {
             padding_after_inlay_hints,
         }) = doc.inlay_hints.get(&self.id)
         {
-            let type_style = theme
-                .and_then(|t| t.find_scope_index("ui.virtual.inlay-hint.type"))
-                .map(Highlight);
-            let parameter_style = theme
-                .and_then(|t| t.find_scope_index("ui.virtual.inlay-hint.parameter"))
-                .map(Highlight);
-            let other_style = theme
-                .and_then(|t| t.find_scope_index("ui.virtual.inlay-hint"))
-                .map(Highlight);
+            let type_style = theme.and_then(|t| t.find_highlight("ui.virtual.inlay-hint.type"));
+            let parameter_style =
+                theme.and_then(|t| t.find_highlight("ui.virtual.inlay-hint.parameter"));
+            let other_style = theme.and_then(|t| t.find_highlight("ui.virtual.inlay-hint"));
 
             // Overlapping annotations are ignored apart from the first so the order here is not random:
             // types -> parameters -> others should hopefully be the "correct" order for most use cases,
@@ -712,7 +704,7 @@ mod tests {
 
     use super::*;
     use arc_swap::ArcSwap;
-    use helix_core::Rope;
+    use helix_core::{syntax, Rope};
 
     // 1 diagnostic + 1 spacer + 3 linenr (< 1000 lines) + 1 spacer + 1 diff
     const DEFAULT_GUTTER_OFFSET: u16 = 7;
@@ -732,6 +724,7 @@ mod tests {
             rope,
             None,
             Arc::new(ArcSwap::new(Arc::new(Config::default()))),
+            Arc::new(ArcSwap::from_pointee(syntax::Loader::default())),
         );
         doc.ensure_view_init(view.id);
 
@@ -907,6 +900,7 @@ mod tests {
             rope,
             None,
             Arc::new(ArcSwap::new(Arc::new(Config::default()))),
+            Arc::new(ArcSwap::from_pointee(syntax::Loader::default())),
         );
         doc.ensure_view_init(view.id);
         assert_eq!(
@@ -937,6 +931,7 @@ mod tests {
             rope,
             None,
             Arc::new(ArcSwap::new(Arc::new(Config::default()))),
+            Arc::new(ArcSwap::from_pointee(syntax::Loader::default())),
         );
         doc.ensure_view_init(view.id);
         assert_eq!(
@@ -961,6 +956,7 @@ mod tests {
             rope,
             None,
             Arc::new(ArcSwap::new(Arc::new(Config::default()))),
+            Arc::new(ArcSwap::from_pointee(syntax::Loader::default())),
         );
         doc.ensure_view_init(view.id);
 
@@ -1045,6 +1041,7 @@ mod tests {
             rope,
             None,
             Arc::new(ArcSwap::new(Arc::new(Config::default()))),
+            Arc::new(ArcSwap::from_pointee(syntax::Loader::default())),
         );
         doc.ensure_view_init(view.id);
 

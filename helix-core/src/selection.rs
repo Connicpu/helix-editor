@@ -9,6 +9,7 @@ use crate::{
     },
     line_ending::get_line_ending,
     movement::Direction,
+    tree_sitter::Node,
     Assoc, ChangeSet, RopeSlice,
 };
 use helix_stdx::range::is_subset;
@@ -16,7 +17,6 @@ use helix_stdx::rope::{self, RopeSliceExt};
 use serde::{Deserialize, Serialize};
 use smallvec::{smallvec, SmallVec};
 use std::{borrow::Cow, iter, slice};
-use tree_sitter::Node;
 
 /// A single selection range.
 ///
@@ -77,8 +77,8 @@ impl Range {
     }
 
     pub fn from_node(node: Node, text: RopeSlice, direction: Direction) -> Self {
-        let from = text.byte_to_char(node.start_byte());
-        let to = text.byte_to_char(node.end_byte());
+        let from = text.byte_to_char(node.start_byte() as usize);
+        let to = text.byte_to_char(node.end_byte() as usize);
         Range::new(from, to).with_direction(direction)
     }
 
