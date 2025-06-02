@@ -51,13 +51,18 @@ impl FileBlame {
         let line_blame_unit = blame.get_mut(&blame_line);
 
         let commit = match line_blame_unit {
+            // Slow path: This is the first time we're trying to get the blame for this line
             Some(LineBlameUnit::Unprocessed(object_id)) => repo.find_commit(*object_id).ok(),
+            // Fast path: We've already processed this line before so we don't need to
+            // search all of the repo's commits to compute the blame
             Some(LineBlameUnit::Processed(line_blame)) => return line_blame.clone(),
+            // This line does not have any blame associated with it
             None => None,
         };
 
         let message = commit.as_ref().and_then(|c| c.message().ok());
         let author = commit.as_ref().and_then(|c| c.author().ok());
+        let time = author.and_then(|a| a.time.parse::<gix::date::Time>().ok());
 
         let line_blame = LineBlame {
             commit_hash: commit
@@ -65,16 +70,12 @@ impl FileBlame {
                 .and_then(|c| c.short_id().map(|id| id.to_string()).ok()),
             author_name: author.map(|a| a.name.to_string()),
             author_email: author.map(|a| a.email.to_string()),
-            commit_date: author
-                .and_then(|a| a.time().ok())
-                .map(|t| t.format(gix::date::time::format::SHORT)),
-            commit_message: message.as_ref().map(|msg| msg.title.to_string()),
+            commit_date: time.map(|time| time.format(gix::date::time::format::SHORT)),
+            commit_title: message.as_ref().map(|msg| msg.title.to_string()),
             commit_body: message
                 .as_ref()
                 .and_then(|msg| msg.body.map(|body| body.to_string())),
-            time_stamp: author
-                .and_then(|a| a.time().ok())
-                .map(|t| (t.seconds, t.offset)),
+            time_stamp: time.map(|time| (time.seconds, time.offset)),
             time_ago: None,
         };
 
@@ -132,7 +133,7 @@ pub struct LineBlame {
     author_name: Option<String>,
     author_email: Option<String>,
     commit_date: Option<String>,
-    commit_message: Option<String>,
+    commit_title: Option<String>,
     commit_body: Option<String>,
     /// Used to compute `time-ago`
     time_stamp: Option<(i64, i32)>,
@@ -162,7 +163,7 @@ impl LineBlame {
                 "commit" => &self.commit_hash,
                 "author" => &self.author_name,
                 "date" => &self.commit_date,
-                "message" => &self.commit_message,
+                "title" => &self.commit_title,
                 "email" => &self.author_email,
                 "body" => &self.commit_body,
                 "time-ago" => {
@@ -414,7 +415,7 @@ mod test {
                                 FileBlame::try_new(file.clone())
                                     .unwrap()
                                     .blame_for_line(line_number, added_lines, removed_lines)
-                                    .commit_message;
+                                    .commit_title;
 
                             assert_eq!(
                                 blame_result,
@@ -558,7 +559,7 @@ mod test {
             author_name: Some("Bob TheBuilder".to_owned()),
             author_email: Some("bob@bob.com".to_owned()),
             commit_date: Some("2028-01-10".to_owned()),
-            commit_message: Some("feat!: extend house".to_owned()),
+            commit_title: Some("feat!: extend house".to_owned()),
             commit_body: Some("BREAKING CHANGE: Removed door".to_owned()),
             time_stamp: None,
             time_ago: None,
@@ -567,7 +568,7 @@ mod test {
 
     #[test]
     pub fn inline_blame_format_parser() {
-        let format = "{author}, {date} • {message} • {commit}";
+        let format = "{author}, {date} • {title} • {commit}";
 
         assert_eq!(
             bob().parse_format(format),
@@ -591,7 +592,7 @@ mod test {
         );
         assert_eq!(
             LineBlame {
-                commit_message: None,
+                commit_title: None,
                 author_email: None,
                 ..bob()
             }
@@ -618,7 +619,7 @@ mod test {
         assert_eq!(
             LineBlame {
                 author_name: None,
-                commit_message: None,
+                commit_title: None,
                 ..bob()
             }
             .parse_format(format),

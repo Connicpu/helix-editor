@@ -43,7 +43,6 @@ use helix_core::{
     ChangeSet, Diagnostic, LineEnding, Range, Rope, RopeBuilder, Selection, Syntax, Transaction,
 };
 
-use crate::editor::InlineBlameCompute;
 use crate::{
     editor::Config,
     events::{DocumentDidChange, SelectionDidChange},
@@ -214,9 +213,8 @@ pub struct Document {
     // NOTE: ideally this would live on the handler for color swatches. This is blocked on a
     // large refactor that would make `&mut Editor` available on the `DocumentDidChange` event.
     pub color_swatch_controller: TaskController,
-    // when fetching blame on-demand, if this field is `true` we request the blame for this document again
+    /// When fetching blame on-demand, if this field is `true` we request the blame for this document again
     pub is_blame_potentially_out_of_date: bool,
-
     // NOTE: this field should eventually go away - we should use the Editor's syn_loader instead
     // of storing a copy on every doc. Then we can remove the surrounding `Arc` and use the
     // `ArcSwap` directly.
@@ -750,11 +748,11 @@ impl Document {
         }
     }
 
-    pub fn should_request_full_file_blame(&mut self, blame_fetch: InlineBlameCompute) -> bool {
-        if blame_fetch == InlineBlameCompute::OnDemand {
-            self.is_blame_potentially_out_of_date
-        } else {
+    pub fn should_request_full_file_blame(&mut self, auto_fetch: bool) -> bool {
+        if auto_fetch {
             true
+        } else {
+            self.is_blame_potentially_out_of_date
         }
     }
 

@@ -200,43 +200,32 @@ Inline blame is virtual text that appears at the end of a line, displaying infor
 
 | Key     | Description                                | Default |
 | ------- | ------------------------------------------ | ------- |
-| `behaviour` | Choose when to show inline blame | `"hidden"` |
-| `compute` | Choose when inline blame should be computed | `"on-demand"` |
-| `format` | The format in which to show the inline blame | `"{author}, {time-ago} • {message} • {commit}"` |
+| `show` | When to show inline blame | `"never"` |
+| `auto-fetch` | Automatically fetch blame information in the background | `false` |
+| `format` | Inline blame message format | `"{author}, {time-ago} • {title} • {commit}"` |
 
-The `behaviour` can be one of the following:
+`show` can be one of the following:
 - `"all-lines"`: Inline blame is on every line.
 - `"cursor-line"`: Inline blame is only on the line of the primary cursor.
-- `"hidden"`: Inline blame is not shown.
+- `"hidden"`: Inline blame is hidden.
 
-Inline blame will only show if the blame for the file has already been computed.
+With `auto-fetch` set to `false`, blame for the current file is fetched only when explicitly requested, such as when using `space + B` to display the blame for the line of the cursor. There may be a little delay when loading the blame.
 
-The `compute` key determines under which circumstances the blame is computed, and can be one of the following:
-- `"on-demand"`: Blame for the file is computed only when explicitly requested, such as when using `space + B` to blame the line of the cursor. There may be a little delay when loading the blame. When opening new files, even with `behaviour` not set to `"hidden"`, the inline blame won't show. It needs to be computed first in order to become available. This computation can be manually triggered by requesting it with `space + B`.
-- `"background"`: Blame for the file is loaded in the background. This will have zero effect on performance of the Editor, but will use a little bit extra resources. Directly requesting the blame with `space + B` will be instant. Inline blame will show as soon as the blame is available when loading new files.
+When `auto-fetch` is set to `true`, blame for the file is fetched in the background; this will have no effect on performance, but will use a little bit extra resources in the background. Directly requesting the blame with `space + B` will be instant. Inline blame will show as soon as the blame is available when loading new files.
 
-`inline-blame-format` allows customization of the blame message, and can be set to any string. Variables can be used like so: `{variable}`. These are the available variables:
+When opening new files, even with `show` set to `"all-lines"` or `"cursor-line"`, the inline blame won't show. It needs to be fetched first in order to become available, which can be triggered manually with `space + B`.
+
+#### `format`
+
+Change the `format` string to customize the blame message displayed. Variables are text placeholders wrapped in curly braces: `{variable}`. The following variables are available:
 
 - `author`: The author of the commit
 - `date`: When the commit was made
 - `time-ago`: How long ago the commit was made
-- `message`: The message of the commit, excluding the body
+- `title`: The title of the commit
 - `body`: The body of the commit
 - `commit`: The short hex SHA1 hash of the commit
 - `email`: The email of the author of the commit
-
-Any of the variables can potentially be empty.
-In this case, the content before the variable will not be included in the string.
-If the variable is at the beginning of the string, the content after the variable will not be included.
-
-Some examples, using the default value `format` value:
-
-- If `author` is empty: `"{time-ago} • {message} • {commit}"`
-- If `time-ago` is empty: `"{author} • {message} • {commit}"`
-- If `message` is empty: `"{author}, {time-ago} • {commit}"`
-- If `commit` is empty: `"{author}, {time-ago} • {message}"`
-- If `time-ago` and `message` is empty: `"{author} • {commit}"`
-- If `author` and `message` is empty: `"{time-ago} • {commit}"`
 
 ### `[editor.cursor-shape]` Section
 
