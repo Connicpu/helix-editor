@@ -25,7 +25,9 @@ use helix_core::{
 use helix_view::{
     annotations::diagnostics::DiagnosticFilter,
     document::{Mode, SCRATCH_BUFFER_NAME},
-    editor::{BufferLineRenderMode, CompleteAction, CursorShapeConfig, InlineBlameConfig, InlineBlameShow},
+    editor::{
+        BufferLineRenderMode, CompleteAction, CursorShapeConfig, InlineBlameConfig, InlineBlameShow,
+    },
     graphics::{Color, CursorKind, Modifier, Rect, Style},
     input::{KeyEvent, MouseButton, MouseEvent, MouseEventKind},
     keyboard::{KeyCode, KeyModifiers},
@@ -1723,6 +1725,7 @@ struct BufferLineInfo {
 impl BufferLineInfo {
     fn clear(&mut self) {
         self.visible_buffers.clear();
+        self.row_max = 0;
     }
 
     fn add_buffer_info(
